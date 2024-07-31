@@ -1,41 +1,50 @@
-import express from 'express'
-import cors from 'cors'
-import { Server } from 'socket.io'
-import http from 'http'
+import express from 'express';
+import cors from 'cors';
+import { Server } from 'socket.io';
+import http from 'http';
 
-const app = express()
-const server = http.createServer(app)
+// Express App Setup
+const app = express();
+app.use(cors()); // CORS Setup
 
-const io = new Server(server,{
-    cors:{
-        origin:"http://localhost:5173",
-        methods:['GET','PUT']
+// Create HTTP Server
+const server = http.createServer(app);
+
+// Socket.io Server Setup
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:5173", // Frontend URL
+        methods: ['GET', 'POST'], // Use 'GET' and 'POST'
     }
-})
+});
 
+// Handle Socket Connections
 io.on("connection", (socket) => {
-    console.log('client conencted',socket.id);
+    console.log('Client connected', socket.id);
 
-    socket.on("join_room",(data)=>{
-        socket.join(data)
-        console.log(`client ID = ${socket.id} and join room is ${data}`);
-    })
+    // Join Room Event
+    socket.on("join_room", (room) => {
+        socket.join(room);
+        console.log(`Client ID = ${socket.id} joined room = ${room}`);
+    });
 
-socket.on("send_message",(data)=>{
-    console.log("send message data",data);
-})
+    // Send Message Event
+    socket.on("send_message", (data) => {
+        console.log("Send message data", data);
+        
+        // Broadcast to all clients in the room, including sender
+        io.emit('receive_message', data);
+        // .in(data.room) not important
+    });
 
+    // Handle Disconnect
+    socket.on("disconnect", () => {
+        console.log('Client disconnected', socket.id);
+    });
+});
 
-    socket.on("disconnect",()=>{
-        console.log('client disconnected',socket.id);
-    })
-    
-  });
-
-app.use(cors())
-
-
-let port = 3000
-server.listen(port,()=>{
-    console.log('server is running');
-})
+// Server Listening
+let port = 3000;
+server.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
